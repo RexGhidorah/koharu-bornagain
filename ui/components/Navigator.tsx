@@ -10,6 +10,7 @@ import {
 import { useEditorUiStore } from '@/lib/stores/editorUiStore'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const THUMBNAIL_DPR =
   typeof window !== 'undefined'
@@ -24,9 +25,8 @@ export function Navigator() {
   const { data: documents = [] } = useListDocuments()
   const totalPages = documents.length
   const currentDocumentId = useEditorUiStore((state) => state.currentDocumentId)
-  const setCurrentDocumentId = useEditorUiStore(
-    (state) => state.setCurrentDocumentId,
-  )
+  const selectedDocumentIds = useEditorUiStore((state) => state.selectedDocumentIds)
+  const handleDocumentSelection = useEditorUiStore((state) => state.handleDocumentSelection)
   const currentDocumentIndex = documents.findIndex(
     (d) => d.id === currentDocumentId,
   )
@@ -46,15 +46,44 @@ export function Navigator() {
       data-total-pages={totalPages}
       className='bg-muted/50 flex h-full min-h-0 w-full flex-col border-r'
     >
-      <div className='border-border border-b px-2 py-1.5'>
-        <p className='text-muted-foreground text-xs tracking-wide uppercase'>
-          {t('navigator.title')}
-        </p>
-        <p className='text-foreground text-xs font-semibold'>
-          {totalPages
-            ? t('navigator.pages', { count: totalPages })
-            : t('navigator.empty')}
-        </p>
+      <div className='border-border flex flex-col gap-1 border-b px-2 py-1.5'>
+        <div className='flex items-center justify-between'>
+          <p className='text-muted-foreground text-xs tracking-wide uppercase'>
+            {t('navigator.title')}
+          </p>
+          {totalPages > 0 && (
+            <Button
+              variant='ghost'
+              size='sm'
+              className='h-auto px-1.5 py-0.5 text-[10px]'
+              onClick={() => {
+                if (selectedDocumentIds.size === totalPages) {
+                  useEditorUiStore.setState({ selectedDocumentIds: new Set() })
+                } else {
+                  useEditorUiStore.setState({
+                    selectedDocumentIds: new Set(documents.map((d) => d.id)),
+                  })
+                }
+              }}
+            >
+              {selectedDocumentIds.size === totalPages
+                ? t('navigator.deselectAll', 'Deselect All')
+                : t('navigator.selectAll', 'Select All')}
+            </Button>
+          )}
+        </div>
+        <div className='flex items-center justify-between'>
+          <p className='text-foreground text-xs font-semibold'>
+            {totalPages
+              ? t('navigator.pages', { count: totalPages })
+              : t('navigator.empty')}
+          </p>
+          {selectedDocumentIds.size > 0 && (
+            <span className='text-muted-foreground text-[10px]'>
+              {selectedDocumentIds.size} selected
+            </span>
+          )}
+        </div>
       </div>
 
       <div className='text-muted-foreground flex items-center gap-1.5 px-2 py-1.5 text-xs'>
@@ -88,7 +117,15 @@ export function Navigator() {
                   index={virtualRow.index}
                   documentId={doc?.id}
                   selected={doc?.id === currentDocumentId}
-                  onSelect={() => doc && setCurrentDocumentId(doc.id)}
+                  checked={doc ? selectedDocumentIds.has(doc.id) : false}
+                  onSelect={(e) => {
+                    if (doc) {
+                      handleDocumentSelection(doc.id, virtualRow.index, documents, {
+                        shiftKey: e.shiftKey,
+                        ctrlKey: e.ctrlKey || e.metaKey,
+                      })
+                    }
+                  }}
                 />
               </div>
             )
@@ -103,13 +140,15 @@ type PagePreviewProps = {
   index: number
   documentId?: string
   selected: boolean
-  onSelect: () => void
+  checked: boolean
+  onSelect: (e: React.MouseEvent | React.KeyboardEvent) => void
 }
 
 function PagePreview({
   index,
   documentId,
   selected,
+  checked,
   onSelect,
 }: PagePreviewProps) {
   const src = documentId
@@ -117,14 +156,31 @@ function PagePreview({
     : undefined
 
   return (
-    <Button
-      variant='ghost'
+    <div
+      role='button'
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect(e)
+        }
+      }}
       data-testid={`navigator-page-${index}`}
       data-page-index={index}
       data-selected={selected}
-      className='bg-card data-[selected=true]:border-primary flex h-full w-full flex-col gap-0.5 rounded border border-transparent p-1.5 text-left shadow-sm'
+      className='bg-card hover:bg-accent hover:text-accent-foreground data-[selected=true]:border-primary relative flex h-full w-full cursor-pointer flex-col gap-0.5 rounded border border-transparent p-1.5 text-left shadow-sm transition-colors'
     >
+      <div className='absolute top-2 left-2 z-10'>
+        <Checkbox
+          checked={checked}
+          onCheckedChange={() => {
+            // Checkbox click is handled by the parent div's onClick
+          }}
+          className='bg-background/80 data-[state=checked]:bg-primary shadow-sm'
+          tabIndex={-1}
+        />
+      </div>
       <div className='flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded'>
         {src ? (
           <img
@@ -140,6 +196,6 @@ function PagePreview({
       <div className='text-muted-foreground flex shrink-0 items-center text-xs'>
         <div className='text-foreground mx-auto font-semibold'>{index + 1}</div>
       </div>
-    </Button>
+    </div>
   )
 }

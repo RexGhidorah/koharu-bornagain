@@ -198,6 +198,13 @@ impl Storage {
         self.project.read().await.pages.len()
     }
 
+    /// Delete multiple pages by ID and save project.
+    pub async fn delete_pages(&self, ids: &[String]) -> Result<()> {
+        let mut project = self.project.write().await;
+        project.pages.retain(|p| !ids.contains(&p.id));
+        self.persist(&project)
+    }
+
     /// Collect all page ids.
     pub async fn page_ids(&self) -> Vec<String> {
         self.project

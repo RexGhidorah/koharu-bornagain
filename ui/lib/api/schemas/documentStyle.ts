@@ -6,5 +6,5 @@
 
 export interface DocumentStyle {
   /** @nullable */
-  defaultFont?: string | null
+  defaultFont?: string | null;
 }

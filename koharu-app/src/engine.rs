@@ -1568,6 +1568,7 @@ mod tests {
     fn pipeline_run_options_copy_request_overrides() {
         let req = koharu_core::commands::ProcessRequest {
             document_id: Some("page-1".to_string()),
+            document_ids: None,
             llm: None,
             language: Some("es-ES".to_string()),
             system_prompt: Some("Translate tersely".to_string()),

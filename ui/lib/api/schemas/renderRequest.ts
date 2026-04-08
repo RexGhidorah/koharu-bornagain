@@ -3,12 +3,12 @@
  * Do not edit manually.
  * OpenAPI spec version: 0.0.1
  */
-import type { TextShaderEffect } from './textShaderEffect'
-import type { TextStrokeStyle } from './textStrokeStyle'
+import type { TextShaderEffect } from './textShaderEffect';
+import type { TextStrokeStyle } from './textStrokeStyle';
 
 export interface RenderRequest {
-  shaderEffect?: null | TextShaderEffect
-  shaderStroke?: null | TextStrokeStyle
+  shaderEffect?: null | TextShaderEffect;
+  shaderStroke?: null | TextStrokeStyle;
   /** @nullable */
-  textBlockId?: string | null
+  textBlockId?: string | null;
 }

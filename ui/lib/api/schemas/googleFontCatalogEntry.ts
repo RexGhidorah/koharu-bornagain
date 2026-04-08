@@ -5,8 +5,8 @@
  */
 
 export interface GoogleFontCatalogEntry {
-  cached: boolean
-  category: string
-  family: string
-  subsets: string[]
+  cached: boolean;
+  category: string;
+  family: string;
+  subsets: string[];
 }

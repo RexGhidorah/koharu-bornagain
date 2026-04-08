@@ -7,6 +7,7 @@ import {
   getListDocumentsQueryKey,
   getGetDocumentQueryKey,
   importDocuments,
+  deleteDocuments,
 } from '@/lib/api/documents/documents'
 import {
   detectDocument,
@@ -103,7 +104,9 @@ export type ProcessingEvent =
       format: string
       params?: { layer?: ExportLayer | null }
     }
-  | { type: 'START_BATCH_EXPORT'; layer: ExportLayer }
+  | { type: 'START_BATCH_EXPORT'; layer: ExportLayer; documentIds?: string[] }
+  | { type: 'START_BATCH_DELETE'; documentIds: string[] }
+  | { type: 'START_BATCH_PROCESS'; request: PipelineJobRequest }
   | {
       type: 'PROGRESS'
       step?: string
@@ -235,9 +238,16 @@ const exportActor = fromPromise<
   await saveBlob(blob, `${summary?.name ?? 'export'}_koharu.${input.format}`)
 })
 
-const batchExportActor = fromPromise<void, { layer: ExportLayer }>(
+const batchExportActor = fromPromise<
+  void,
+  { layer: ExportLayer; documentIds?: string[] }
+>(async ({ input }) => {
+  await batchExport({ layer: input.layer, documentIds: input.documentIds })
+})
+
+const batchDeleteActor = fromPromise<void, { documentIds: string[] }>(
   async ({ input }) => {
-    await batchExport({ layer: input.layer })
+    await deleteDocuments({ documentIds: input.documentIds })
   },
 )
 
@@ -329,6 +339,7 @@ export const processingMachine = setup({
     llmUnloadActor,
     exportActor,
     batchExportActor,
+    batchDeleteActor,
     jobPollingActor,
     llmPollingActor,
   },
@@ -359,12 +370,25 @@ export const processingMachine = setup({
     }),
     setPipelineDocumentId: assign({
       documentId: ({ event }) => {
-        if (event.type === 'START_PIPELINE') {
+        if (event.type === 'START_PIPELINE' || event.type === 'START_BATCH_PROCESS') {
           return event.request.documentId ?? null
         }
         return null
       },
     }),
+    clearDeletedDocumentsSelection: ({ event }) => {
+      const e = event as Extract<ProcessingEvent, { type: 'START_BATCH_DELETE' }>
+      const store = useEditorUiStore.getState()
+      const ids = new Set(e.documentIds)
+
+      const newSelection = new Set(store.selectedDocumentIds)
+      ids.forEach(id => newSelection.delete(id))
+      useEditorUiStore.setState({ selectedDocumentIds: newSelection })
+
+      if (store.currentDocumentId && ids.has(store.currentDocumentId)) {
+        store.setCurrentDocumentId(null)
+      }
+    },
 
     // --- progress update ---
     updateProgress: assign({
@@ -517,6 +541,14 @@ export const processingMachine = setup({
         START_BATCH_EXPORT: {
           target: 'batchExporting',
           actions: ['resetContext'],
+        },
+        START_BATCH_DELETE: {
+          target: 'batchDeleting',
+          actions: ['resetContext'],
+        },
+        START_BATCH_PROCESS: {
+          target: 'pipeline',
+          actions: ['resetContext', 'setPipelineDocumentId'],
         },
       },
     },
@@ -705,7 +737,7 @@ export const processingMachine = setup({
             input: ({ event }) => {
               const e = event as Extract<
                 ProcessingEvent,
-                { type: 'START_PIPELINE' }
+                { type: 'START_PIPELINE' } | { type: 'START_BATCH_PROCESS' }
               >
               return { request: e.request }
             },
@@ -859,10 +891,34 @@ export const processingMachine = setup({
             ProcessingEvent,
             { type: 'START_BATCH_EXPORT' }
           >
-          return { layer: e.layer }
+          return { layer: e.layer, documentIds: e.documentIds }
         },
         onDone: {
           target: 'idle',
+        },
+        onError: {
+          target: 'idle',
+          actions: ['setErrorFromInvoke', 'surfaceError'],
+        },
+      },
+    },
+
+    // -----------------------------------------------------------------------
+    batchDeleting: {
+      entry: 'setProgressBarNormal',
+      exit: 'clearProgressBar',
+      invoke: {
+        src: 'batchDeleteActor',
+        input: ({ event }) => {
+          const e = event as Extract<
+            ProcessingEvent,
+            { type: 'START_BATCH_DELETE' }
+          >
+          return { documentIds: e.documentIds }
+        },
+        onDone: {
+          target: 'idle',
+          actions: ['invalidateDocumentList', 'clearDeletedDocumentsSelection'],
         },
         onError: {
           target: 'idle',

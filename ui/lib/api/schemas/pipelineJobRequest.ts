@@ -3,18 +3,20 @@
  * Do not edit manually.
  * OpenAPI spec version: 0.0.1
  */
-import type { PipelineLlmRequest } from './pipelineLlmRequest'
-import type { TextShaderEffect } from './textShaderEffect'
-import type { TextStrokeStyle } from './textStrokeStyle'
+import type { PipelineLlmRequest } from './pipelineLlmRequest';
+import type { TextShaderEffect } from './textShaderEffect';
+import type { TextStrokeStyle } from './textStrokeStyle';
 
 export interface PipelineJobRequest {
   /** @nullable */
-  documentId?: string | null
+  documentId?: string | null;
   /** @nullable */
-  language?: string | null
-  llm?: null | PipelineLlmRequest
-  shaderEffect?: null | TextShaderEffect
-  shaderStroke?: null | TextStrokeStyle
+  documentIds?: string[] | null;
   /** @nullable */
-  systemPrompt?: string | null
+  language?: string | null;
+  llm?: null | PipelineLlmRequest;
+  shaderEffect?: null | TextShaderEffect;
+  shaderStroke?: null | TextStrokeStyle;
+  /** @nullable */
+  systemPrompt?: string | null;
 }

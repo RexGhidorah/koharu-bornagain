@@ -4,8 +4,6 @@
  * OpenAPI spec version: 0.0.1
  */
 
-export interface ApiError {
-  message: string;
-  /** @minimum 0 */
-  status: number;
+export interface DeleteDocumentsRequest {
+  documentIds: string[];
 }

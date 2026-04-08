@@ -66,12 +66,13 @@ export function MenuBar() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<TabId>('appearance')
 
-  const buildPipelineRequest = (documentId?: string): PipelineJobRequest => {
+  const buildPipelineRequest = (documentId?: string, documentIds?: string[]): PipelineJobRequest => {
     const { selectedTarget, selectedLanguage, renderEffect, renderStroke } =
       useEditorUiStore.getState()
     const { customSystemPrompt } = usePreferencesStore.getState()
     return {
       documentId,
+      documentIds,
       llm: selectedTarget ? { target: selectedTarget } : undefined,
       language: selectedLanguage,
       systemPrompt: customSystemPrompt,
@@ -85,6 +86,8 @@ export function MenuBar() {
     if (!id) throw new Error('No current document selected')
     return id
   }
+
+  const selectedDocumentIds = useEditorUiStore(state => state.selectedDocumentIds)
 
   const fileMenuItems: MenuItem[] = [
     {
@@ -133,14 +136,22 @@ export function MenuBar() {
       testId: 'menu-file-export-psd',
     },
     {
-      label: t('menu.exportAllInpainted'),
-      onSelect: () => send({ type: 'START_BATCH_EXPORT', layer: 'inpainted' }),
-      testId: 'menu-file-export-all-inpainted',
+      label: t('menu.exportSelectedInpainted', 'Export Selected Inpainted'),
+      onSelect: () => send({ type: 'START_BATCH_EXPORT', layer: 'inpainted', documentIds: Array.from(selectedDocumentIds) }),
+      testId: 'menu-file-export-selected-inpainted',
+      disabled: selectedDocumentIds.size === 0,
     },
     {
-      label: t('menu.exportAllRendered'),
-      onSelect: () => send({ type: 'START_BATCH_EXPORT', layer: 'rendered' }),
-      testId: 'menu-file-export-all-rendered',
+      label: t('menu.exportSelectedRendered', 'Export Selected Rendered'),
+      onSelect: () => send({ type: 'START_BATCH_EXPORT', layer: 'rendered', documentIds: Array.from(selectedDocumentIds) }),
+      testId: 'menu-file-export-selected-rendered',
+      disabled: selectedDocumentIds.size === 0,
+    },
+    {
+      label: t('menu.deleteSelected', 'Delete Selected'),
+      onSelect: () => send({ type: 'START_BATCH_DELETE', documentIds: Array.from(selectedDocumentIds) }),
+      testId: 'menu-file-delete-selected',
+      disabled: selectedDocumentIds.size === 0,
     },
   ]
 
@@ -174,6 +185,17 @@ export function MenuBar() {
             send({ type: 'START_INPAINT', documentId })
           },
           testId: 'menu-process-rerender',
+        },
+        {
+          label: t('menu.processSelected', 'Process Selected'),
+          onSelect: () => {
+            send({
+              type: 'START_BATCH_PROCESS',
+              request: buildPipelineRequest(undefined, Array.from(selectedDocumentIds)),
+            })
+          },
+          testId: 'menu-process-selected',
+          disabled: selectedDocumentIds.size === 0,
         },
         {
           label: t('menu.processAll'),

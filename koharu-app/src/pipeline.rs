@@ -87,9 +87,12 @@ pub async fn process(
     payload: koharu_core::commands::ProcessRequest,
     jobs: Jobs,
 ) -> anyhow::Result<String> {
-    let total_docs = match payload.document_id.as_deref() {
-        Some(_) => 1,
-        None => state.storage.page_count().await,
+    let total_docs = if let Some(ids) = &payload.document_ids {
+        ids.len()
+    } else if payload.document_id.is_some() {
+        1
+    } else {
+        state.storage.page_count().await
     };
     let config = state.config.read().await.clone();
     let total_steps = engine::resolve_pipeline(&config.pipeline).len();
@@ -150,9 +153,12 @@ async fn run(
         tracing::error!(error = %err, "pipeline failed");
     }
 
-    let total_docs = match request.document_id {
-        Some(_) => 1,
-        None => res.storage.page_count().await,
+    let total_docs = if let Some(ids) = &request.document_ids {
+        ids.len()
+    } else if request.document_id.is_some() {
+        1
+    } else {
+        res.storage.page_count().await
     };
     let config = res.config.read().await.clone();
     let total_steps = engine::resolve_pipeline(&config.pipeline).len();
@@ -226,12 +232,16 @@ async fn run_inner(
     job_id: &str,
     jobs: &Jobs,
 ) -> anyhow::Result<BatchReport> {
-    let page_ids: Vec<String> = match req.document_id.as_deref() {
-        Some(id) => {
+    let page_ids: Vec<String> = if let Some(ids) = &req.document_ids {
+        for id in ids {
             res.storage.page(id).await?;
-            vec![id.to_string()]
         }
-        None => res.storage.page_ids().await,
+        ids.clone()
+    } else if let Some(id) = req.document_id.as_deref() {
+        res.storage.page(id).await?;
+        vec![id.to_string()]
+    } else {
+        res.storage.page_ids().await
     };
     let total_docs = page_ids.len();
     let mut report = BatchReport::new(total_docs);

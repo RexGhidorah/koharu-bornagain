@@ -27,6 +27,8 @@ type EditorUiState = {
   totalPages: number
   documentsVersion: number
   currentDocumentId: string | null
+  selectedDocumentIds: Set<string>
+  selectionAnchorIndex: number | null
   scale: number
   showSegmentationMask: boolean
   showInpaintedImage: boolean
@@ -51,6 +53,12 @@ type EditorUiState = {
   setAutoFitEnabled: (enabled: boolean) => void
   setRenderEffect: (effect: RenderEffect) => void
   setRenderStroke: (stroke?: RenderStroke) => void
+  handleDocumentSelection: (
+    id: string,
+    index: number,
+    allDocuments: { id: string }[],
+    options: { shiftKey: boolean; ctrlKey: boolean },
+  ) => void
 
   // --- llm ui ---
   selectedTarget?: LlmTarget
@@ -72,6 +80,8 @@ const initialState = {
   totalPages: 0,
   documentsVersion: 0,
   currentDocumentId: null as string | null,
+  selectedDocumentIds: new Set<string>(),
+  selectionAnchorIndex: null as number | null,
   scale: 100,
   showSegmentationMask: false,
   showInpaintedImage: false,
@@ -106,6 +116,8 @@ export const useEditorUiStore = create<EditorUiState>((set, get) => ({
         totalPages: count,
         documentsVersion: state.documentsVersion + 1,
         currentDocumentId: null,
+        selectedDocumentIds: new Set<string>(),
+        selectionAnchorIndex: null,
         selectedBlockIndex: undefined,
       }
     })
@@ -113,8 +125,44 @@ export const useEditorUiStore = create<EditorUiState>((set, get) => ({
   setCurrentDocumentId: (id) =>
     set(() => ({
       currentDocumentId: id,
+      selectedDocumentIds: new Set<string>(id ? [id] : []),
+      selectionAnchorIndex: null,
       selectedBlockIndex: undefined,
     })),
+  handleDocumentSelection: (id, index, allDocuments, { shiftKey, ctrlKey }) => {
+    set((state) => {
+      const nextSelected = new Set(state.selectedDocumentIds)
+      let nextAnchor = state.selectionAnchorIndex
+
+      if (shiftKey && nextAnchor !== null) {
+        // Range selection
+        if (!ctrlKey) nextSelected.clear()
+        const start = Math.min(nextAnchor, index)
+        const end = Math.max(nextAnchor, index)
+        for (let i = start; i <= end; i++) {
+          const docId = allDocuments[i]?.id
+          if (docId) nextSelected.add(docId)
+        }
+      } else if (ctrlKey) {
+        // Toggle single item
+        if (nextSelected.has(id)) nextSelected.delete(id)
+        else nextSelected.add(id)
+        nextAnchor = index
+      } else {
+        // Normal click
+        nextSelected.clear()
+        nextSelected.add(id)
+        nextAnchor = index
+      }
+
+      return {
+        currentDocumentId: id,
+        selectedDocumentIds: nextSelected,
+        selectionAnchorIndex: nextAnchor,
+        selectedBlockIndex: undefined,
+      }
+    })
+  },
   setScale: (scale) => {
     const clamped = Math.max(10, Math.min(100, Math.round(scale)))
     set({ scale: clamped })

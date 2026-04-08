@@ -3,9 +3,9 @@
  * Do not edit manually.
  * OpenAPI spec version: 0.0.1
  */
-import type { GoogleFontCatalogEntry } from './googleFontCatalogEntry'
+import type { GoogleFontCatalogEntry } from './googleFontCatalogEntry';
 
 export interface GoogleFontCatalogResponse {
-  fonts: GoogleFontCatalogEntry[]
-  recommended: string[]
+  fonts: GoogleFontCatalogEntry[];
+  recommended: string[];
 }

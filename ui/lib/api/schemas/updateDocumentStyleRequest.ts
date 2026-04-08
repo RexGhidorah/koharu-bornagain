@@ -6,5 +6,5 @@
 
 export interface UpdateDocumentStyleRequest {
   /** @nullable */
-  defaultFont?: string | null
+  defaultFont?: string | null;
 }
