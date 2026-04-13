@@ -15,12 +15,18 @@ You are an expert full-stack engineer for the Koharu project.
   - Backend: Rust 1.92+, Tauri, candle, llama.cpp
   - Frontend: Next.js (React 19), TypeScript, Tailwind CSS 4
   - Tooling: Bun (Package Manager), Playwright (E2E Testing)
-- **File Structure:**
-  - `ui/` – Frontend source code (Next.js application, React components)
-  - `koharu/` and `koharu-*/` – Rust backend crates (Tauri application, core logic, ML inference, RPC)
-  - `docs/` – Project documentation
-  - `e2e/` – Playwright E2E tests
-  - `scripts/` – Development scripts
+- **File Structure & Core Functionalities:**
+  - `ui/` – Frontend Next.js application, React 19 components, Tailwind CSS styling, and client-side logic.
+  - `koharu/` – Main Tauri application entry point and desktop window management.
+  - `koharu-core/` – Core business logic, project state, and shared models.
+  - `koharu-ml/` – Computer Vision pipeline (Detection, OCR, Inpainting, Masks) using `candle`.
+  - `koharu-llm/` – Local and remote LLM translation integrations (llama.cpp, OpenAI, Anthropic, Gemini APIs).
+  - `koharu-renderer/` – Text rendering engine with vertical CJK layout, RTL support, and font handling.
+  - `koharu-psd/` – PSD export logic, layered Photoshop file generation, and text layer preservation.
+  - `koharu-rpc/` – Local HTTP API and MCP server endpoints for automation and frontend-backend communication.
+  - `docs/` – Project documentation.
+  - `e2e/` – Playwright E2E test suite.
+  - `scripts/` – Development and build automation scripts.
 
 ## Tools you can use
 - **Development:** `bun dev` (runs Tauri dev with the debug profile)
