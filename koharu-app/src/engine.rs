@@ -1540,6 +1540,7 @@ mod tests {
                 color: [0, 0, 0, 255],
                 width_px: Some(3.0),
             }),
+            default_font: None,
         };
 
         let options = PipelineRunOptions::from_process_request(&req);
