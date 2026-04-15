@@ -1,3 +1,39 @@
+## [0.44.5](https://github.com/mayocream/koharu/compare/0.44.4..0.44.5) - 2026-04-15
+
+### ⛰️  Features
+
+- Portable mode ([#415](https://github.com/mayocream/koharu/issues/415)) - ([332f55b](https://github.com/mayocream/koharu/commit/332f55b78d7a941c52c2e424b9ac1f4b58a52c76))
+
+### 📚 Documentation
+
+- Runtime & model downloads - ([0a913e9](https://github.com/mayocream/koharu/commit/0a913e99ed32e3a585e0511d66b2aaee852811bf))
+
+
+## [0.44.4](https://github.com/mayocream/koharu/compare/0.44.3..0.44.4) - 2026-04-15
+
+### 🐛 Bug Fixes
+
+- Resolve incorrect ZLUDA DLLs usage ([#442](https://github.com/mayocream/koharu/issues/442)) ([#458](https://github.com/mayocream/koharu/issues/458)) - ([63bf6c1](https://github.com/mayocream/koharu/commit/63bf6c1c6c5844ac4bfc2e01a24546a870abd1b0))
+
+
+## [0.44.3](https://github.com/mayocream/koharu/compare/0.44.2..0.44.3) - 2026-04-15
+
+### 🐛 Bug Fixes
+
+- Load correct ZLUDA DLLs - ([b3385d0](https://github.com/mayocream/koharu/commit/b3385d031fc8c15e02d36bf53aae37b0a8b92bc6))
+
+### 📚 Documentation
+
+- Improve README formatting and add resource links - ([1c8ad74](https://github.com/mayocream/koharu/commit/1c8ad742592b0d078c719acf4136f1d70c51ef5d))
+
+
+## [0.44.2](https://github.com/mayocream/koharu/compare/0.44.1..0.44.2) - 2026-04-14
+
+### 🐛 Bug Fixes
+
+- Upgrade zluda to v6-preview.64 - ([23d97e5](https://github.com/mayocream/koharu/commit/23d97e552fb9d460ceb0d772c7823518efb36eef))
+
+
 ## [0.44.1](https://github.com/mayocream/koharu/compare/0.44.0..0.44.1) - 2026-04-14
 
 ### 🐛 Bug Fixes

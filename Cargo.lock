@@ -4342,7 +4342,7 @@ dependencies = [
 
 [[package]]
 name = "koharu"
-version = "0.44.1"
+version = "0.44.5"
 dependencies = [
  "anyhow",
  "camino",
@@ -4376,7 +4376,7 @@ dependencies = [
 
 [[package]]
 name = "koharu-app"
-version = "0.44.1"
+version = "0.44.5"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4392,6 +4392,7 @@ dependencies = [
  "koharu-renderer",
  "koharu-runtime",
  "lru",
+ "natord",
  "open",
  "petgraph",
  "petname",
@@ -4413,7 +4414,7 @@ dependencies = [
 
 [[package]]
 name = "koharu-core"
-version = "0.44.1"
+version = "0.44.5"
 dependencies = [
  "anyhow",
  "blake3",
@@ -4430,7 +4431,7 @@ dependencies = [
 
 [[package]]
 name = "koharu-llm"
-version = "0.44.1"
+version = "0.44.5"
 dependencies = [
  "anyhow",
  "bindgen",
@@ -4470,7 +4471,7 @@ dependencies = [
 
 [[package]]
 name = "koharu-ml"
-version = "0.44.1"
+version = "0.44.5"
 dependencies = [
  "anyhow",
  "candle-core",
@@ -4508,7 +4509,7 @@ dependencies = [
 
 [[package]]
 name = "koharu-psd"
-version = "0.44.1"
+version = "0.44.5"
 dependencies = [
  "image",
  "koharu-core",
@@ -4517,7 +4518,7 @@ dependencies = [
 
 [[package]]
 name = "koharu-renderer"
-version = "0.44.1"
+version = "0.44.5"
 dependencies = [
  "anyhow",
  "criterion",
@@ -4539,7 +4540,7 @@ dependencies = [
 
 [[package]]
 name = "koharu-rpc"
-version = "0.44.1"
+version = "0.44.5"
 dependencies = [
  "anyhow",
  "axum",
@@ -4565,7 +4566,7 @@ dependencies = [
 
 [[package]]
 name = "koharu-runtime"
-version = "0.44.1"
+version = "0.44.5"
 dependencies = [
  "anyhow",
  "axum",
@@ -5135,6 +5136,12 @@ dependencies = [
  "security-framework-sys",
  "tempfile",
 ]
+
+[[package]]
+name = "natord"
+version = "1.0.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "308d96db8debc727c3fd9744aac51751243420e46edf401010908da7f8d5e57c"
 
 [[package]]
 name = "ndk"
