@@ -73,7 +73,9 @@ pub fn extract_epub_images(data: &[u8]) -> anyhow::Result<Vec<FileEntry>> {
         let href = item.attribute("href");
         let media_type = item.attribute("media-type");
         if let (Some(id), Some(href), Some(media_type)) = (id, href, media_type) {
-            let decoded_href = percent_encoding::percent_decode_str(href).decode_utf8_lossy().to_string();
+            let decoded_href = percent_encoding::percent_decode_str(href)
+                .decode_utf8_lossy()
+                .to_string();
             id_to_href.insert(id.to_string(), decoded_href);
             media_types.insert(id.to_string(), media_type.to_string());
         }
@@ -158,8 +160,12 @@ pub fn extract_epub_images(data: &[u8]) -> anyhow::Result<Vec<FileEntry>> {
                                     };
 
                                     // Handle simple relative paths (doesn't handle ../ fully correctly yet)
-                                    let decoded_img_href = percent_encoding::percent_decode_str(img_href).decode_utf8_lossy().to_string();
-                                    let resolved_href = resolve_relative_path(base_dir, &decoded_img_href);
+                                    let decoded_img_href =
+                                        percent_encoding::percent_decode_str(img_href)
+                                            .decode_utf8_lossy()
+                                            .to_string();
+                                    let resolved_href =
+                                        resolve_relative_path(base_dir, &decoded_img_href);
 
                                     if extracted_full_paths.insert(resolved_href.clone()) {
                                         if let Ok(file_entry) =
@@ -184,8 +190,12 @@ pub fn extract_epub_images(data: &[u8]) -> anyhow::Result<Vec<FileEntry>> {
                                 } else {
                                     ""
                                 };
-                                let decoded_img_href = percent_encoding::percent_decode_str(img_href).decode_utf8_lossy().to_string();
-                                let resolved_href = resolve_relative_path(base_dir, &decoded_img_href);
+                                let decoded_img_href =
+                                    percent_encoding::percent_decode_str(img_href)
+                                        .decode_utf8_lossy()
+                                        .to_string();
+                                let resolved_href =
+                                    resolve_relative_path(base_dir, &decoded_img_href);
                                 if extracted_full_paths.insert(resolved_href.clone()) {
                                     if let Ok(file_entry) =
                                         extract_file(&mut archive, &resolved_href)
