@@ -108,101 +108,93 @@ pub fn extract_epub_images(data: &[u8]) -> anyhow::Result<Vec<FileEntry>> {
     // in the HTML file, or just fallback to extracting all images from the manifest
     // sorted by their order of appearance in the manifest.
 
+    let fallback_re =
+        regex::Regex::new(r#"(?i)<(?:img|image)[^>]+(?:src|href)=["']([^"']+)["']"#).unwrap();
+
     for idref in &spine_items {
-        if let Some(href) = id_to_href.get(idref) {
-            if let Some(media_type) = media_types.get(idref) {
-                if media_type.starts_with("image/") {
-                    let full_path = format!("{}{}", opf_dir, href);
-                    if extracted_full_paths.insert(full_path.clone()) {
-                        if let Ok(file_entry) = extract_file(&mut archive, &full_path) {
-                            all_images.push(file_entry);
-                        }
+        if let Some(href) = id_to_href.get(idref)
+            && let Some(media_type) = media_types.get(idref)
+        {
+            if media_type.starts_with("image/") {
+                let full_path = format!("{}{}", opf_dir, href);
+                if extracted_full_paths.insert(full_path.clone())
+                    && let Ok(file_entry) = extract_file(&mut archive, &full_path)
+                {
+                    all_images.push(file_entry);
+                }
+            } else if media_type == "application/xhtml+xml" {
+                // It's an HTML page. To properly extract images in order from HTML,
+                // we can read the HTML and look for <img> tags.
+                let full_path = format!("{}{}", opf_dir, href);
+                let mut file_content = String::new();
+                let read_ok = {
+                    let file_result = archive.by_name(&full_path);
+                    if let Ok(mut file) = file_result {
+                        std::io::Read::read_to_string(&mut file, &mut file_content).is_ok()
+                    } else {
+                        false
                     }
-                } else if media_type == "application/xhtml+xml" {
-                    // It's an HTML page. To properly extract images in order from HTML,
-                    // we can read the HTML and look for <img> tags.
-                    let full_path = format!("{}{}", opf_dir, href);
-                    let mut file_content = String::new();
-                    let read_ok = {
-                        let file_result = archive.by_name(&full_path);
-                        if let Ok(mut file) = file_result {
-                            std::io::Read::read_to_string(&mut file, &mut file_content).is_ok()
-                        } else {
-                            false
-                        }
-                    };
+                };
 
-                    if read_ok {
-                        // Simple parsing for <img> tags
-                        if let Ok(html_doc) = roxmltree::Document::parse(&file_content) {
-                            for img in html_doc
-                                .descendants()
-                                .filter(|n| n.has_tag_name("img") || n.has_tag_name("image"))
-                            {
-                                // Use 'src' for <img>, 'xlink:href' for <svg><image>
-                                let img_href = img
-                                    .attribute("src")
-                                    .or_else(|| img.attribute("href"))
-                                    .or_else(|| {
-                                        img.attributes()
-                                            .find(|a| {
-                                                a.name() == "href" || a.name() == "xlink:href"
-                                            })
-                                            .map(|a| a.value())
-                                    });
+                if read_ok {
+                    // Simple parsing for <img> tags
+                    if let Ok(html_doc) = roxmltree::Document::parse(&file_content) {
+                        for img in html_doc
+                            .descendants()
+                            .filter(|n| n.has_tag_name("img") || n.has_tag_name("image"))
+                        {
+                            // Use 'src' for <img>, 'xlink:href' for <svg><image>
+                            let img_href = img
+                                .attribute("src")
+                                .or_else(|| img.attribute("href"))
+                                .or_else(|| {
+                                    img.attributes()
+                                        .find(|a| a.name() == "href" || a.name() == "xlink:href")
+                                        .map(|a| a.value())
+                                });
 
-                                if let Some(img_href) = img_href {
-                                    // Resolve relative path
-                                    let base_dir = if let Some(pos) = full_path.rfind('/') {
-                                        &full_path[..pos + 1]
-                                    } else {
-                                        ""
-                                    };
-
-                                    // Handle simple relative paths (doesn't handle ../ fully correctly yet)
-                                    let decoded_img_href =
-                                        percent_encoding::percent_decode_str(img_href)
-                                            .decode_utf8_lossy()
-                                            .to_string();
-                                    let resolved_href =
-                                        resolve_relative_path(base_dir, &decoded_img_href);
-
-                                    if extracted_full_paths.insert(resolved_href.clone()) {
-                                        if let Ok(file_entry) =
-                                            extract_file(&mut archive, &resolved_href)
-                                        {
-                                            all_images.push(file_entry);
-                                        }
-                                    }
-                                }
-                            }
-                        } else {
-                            // Fallback: simple string matching for poorly formed XHTML
-                            // Many EPUBs have invalid XML in XHTML files.
-                            let re = regex::Regex::new(
-                                r#"(?i)<(?:img|image)[^>]+(?:src|href)=["']([^"']+)["']"#,
-                            )
-                            .unwrap();
-                            for cap in re.captures_iter(&file_content) {
-                                let img_href = &cap[1];
+                            if let Some(img_href) = img_href {
+                                // Resolve relative path
                                 let base_dir = if let Some(pos) = full_path.rfind('/') {
                                     &full_path[..pos + 1]
                                 } else {
                                     ""
                                 };
+
+                                // Handle simple relative paths (doesn't handle ../ fully correctly yet)
                                 let decoded_img_href =
                                     percent_encoding::percent_decode_str(img_href)
                                         .decode_utf8_lossy()
                                         .to_string();
                                 let resolved_href =
                                     resolve_relative_path(base_dir, &decoded_img_href);
-                                if extracted_full_paths.insert(resolved_href.clone()) {
-                                    if let Ok(file_entry) =
+
+                                if extracted_full_paths.insert(resolved_href.clone())
+                                    && let Ok(file_entry) =
                                         extract_file(&mut archive, &resolved_href)
-                                    {
-                                        all_images.push(file_entry);
-                                    }
+                                {
+                                    all_images.push(file_entry);
                                 }
+                            }
+                        }
+                    } else {
+                        // Fallback: simple string matching for poorly formed XHTML
+                        // Many EPUBs have invalid XML in XHTML files.
+                        for cap in fallback_re.captures_iter(&file_content) {
+                            let img_href = &cap[1];
+                            let base_dir = if let Some(pos) = full_path.rfind('/') {
+                                &full_path[..pos + 1]
+                            } else {
+                                ""
+                            };
+                            let decoded_img_href = percent_encoding::percent_decode_str(img_href)
+                                .decode_utf8_lossy()
+                                .to_string();
+                            let resolved_href = resolve_relative_path(base_dir, &decoded_img_href);
+                            if extracted_full_paths.insert(resolved_href.clone())
+                                && let Ok(file_entry) = extract_file(&mut archive, &resolved_href)
+                            {
+                                all_images.push(file_entry);
                             }
                         }
                     }
@@ -215,15 +207,15 @@ pub fn extract_epub_images(data: &[u8]) -> anyhow::Result<Vec<FileEntry>> {
     // extract all remaining images in the manifest. We'll sort them by ID just in case.
     let mut remaining_images = Vec::new();
     for (id, href) in &id_to_href {
-        if let Some(media_type) = media_types.get(id) {
-            if media_type.starts_with("image/") {
-                let full_path = format!("{}{}", opf_dir, href);
-                if !extracted_full_paths.contains(&full_path) {
-                    if let Ok(file_entry) = extract_file(&mut archive, &full_path) {
-                        remaining_images.push((id.clone(), file_entry));
-                        extracted_full_paths.insert(full_path);
-                    }
-                }
+        if let Some(media_type) = media_types.get(id)
+            && media_type.starts_with("image/")
+        {
+            let full_path = format!("{}{}", opf_dir, href);
+            if !extracted_full_paths.contains(&full_path)
+                && let Ok(file_entry) = extract_file(&mut archive, &full_path)
+            {
+                remaining_images.push((id.clone(), file_entry));
+                extracted_full_paths.insert(full_path);
             }
         }
     }
@@ -246,7 +238,7 @@ fn extract_file<R: std::io::Read + std::io::Seek>(
     file.read_to_end(&mut data)?;
 
     // Get just the filename
-    let name = path.split('/').last().unwrap_or(path).to_string();
+    let name = path.split('/').next_back().unwrap_or(path).to_string();
 
     Ok(FileEntry { name, data })
 }
