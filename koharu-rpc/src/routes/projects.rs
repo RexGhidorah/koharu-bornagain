@@ -182,6 +182,23 @@ pub struct ExportProjectRequest {
     /// Optional subset of pages; defaults to every page.
     #[serde(default)]
     pub pages: Option<Vec<PageId>>,
+    #[serde(default)]
+    pub cbz_metadata: Option<CbzExportMetadata>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CbzExportMetadata {
+    pub cover_page: Option<PageId>,
+    /// Maps chapter titles to the ID of the page where the chapter begins.
+    pub chapters: Vec<CbzChapter>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CbzChapter {
+    pub title: String,
+    pub start_page: PageId,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, utoipa::ToSchema)]
@@ -195,6 +212,8 @@ pub enum ExportFormat {
     Rendered,
     /// One `.png` per page (the Inpainted layer).
     Inpainted,
+    /// `.cbz` archive (a zip containing PNGs grouped by chapters).
+    Cbz,
 }
 
 #[utoipa::path(
@@ -276,6 +295,15 @@ async fn export_current_project(
             )
             .await
         }
+        ExportFormat::Cbz => {
+            export_cbz(
+                &session,
+                req.pages.as_deref(),
+                req.cbz_metadata,
+                &project_name,
+            )
+            .await
+        }
     }
 }
 
@@ -310,6 +338,90 @@ async fn export_image_role(
         ));
     }
     files_to_response(files, project_name, role_ext(role))
+}
+
+async fn export_cbz(
+    session: &std::sync::Arc<koharu_app::ProjectSession>,
+    pages: Option<&[PageId]>,
+    metadata: Option<CbzExportMetadata>,
+    project_name: &str,
+) -> ApiResult<Response> {
+    let page_ids = resolve_page_ids(session, pages)?;
+    if page_ids.is_empty() {
+        return Err(ApiError::bad_request("no pages in selection"));
+    }
+    let session_c = session.clone();
+    let page_ids_c = page_ids.clone();
+    let metadata_c = metadata.clone();
+
+    let zip_bytes = tokio::task::spawn_blocking(move || -> anyhow::Result<_> {
+        let mut out: Vec<(String, Vec<u8>)> = Vec::new();
+        let mut current_chapter = "Chapter 1".to_string();
+
+        let mut chapter_starts = std::collections::HashMap::new();
+        if let Some(meta) = &metadata_c {
+            for chap in &meta.chapters {
+                chapter_starts.insert(chap.start_page, chap.title.clone());
+            }
+        }
+
+        let mut page_counter = 1;
+        for id in &page_ids_c {
+            if let Some(chap_title) = chapter_starts.get(id) {
+                current_chapter = chap_title.clone();
+                page_counter = 1;
+            }
+
+            // Export logic requested by user:
+            // "just ensure the 'Export to CBZ' exports ALL the images and not only the inpainted/processed ones."
+            // We use Rendered first. If Rendered is not populated (page not processed),
+            // fallback to Inpainted, and finally to Source.
+            // This ensures every page is exported.
+            let bytes = if let Some(b) = crate::psd_export::png_bytes_for_page(&session_c, *id, ImageRole::Rendered)? {
+                b
+            } else if let Some(b) = crate::psd_export::png_bytes_for_page(&session_c, *id, ImageRole::Inpainted)? {
+                b
+            } else if let Some(b) = crate::psd_export::png_bytes_for_page(&session_c, *id, ImageRole::Source)? {
+                b
+            } else {
+                continue;
+            };
+
+            let is_cover = metadata_c.as_ref().map_or(false, |m| m.cover_page == Some(*id));
+            let filename = if is_cover {
+                "00_cover.png".to_string()
+            } else {
+                // Sanitize chapter name for folder
+                let safe_chapter: String = current_chapter
+                    .chars()
+                    .map(|c| if c.is_ascii_alphanumeric() || c == ' ' { c } else { '_' })
+                    .collect();
+                format!("{}/{:03}.png", safe_chapter, page_counter)
+            };
+
+            out.push((filename, bytes));
+            if !is_cover {
+                page_counter += 1;
+            }
+        }
+
+        if out.is_empty() {
+            return Err(anyhow::anyhow!("no pages have images populated"));
+        }
+
+        koharu_app::archive::zip_files_to_bytes(&out)
+    })
+    .await
+    .map_err(|e| ApiError::internal(anyhow::Error::new(e)))?
+    .map_err(ApiError::internal)?;
+
+    let base = sanitize(project_name, "export");
+    let filename = format!("{base}.cbz");
+    Ok(bytes_response_with_filename(
+        zip_bytes,
+        &filename,
+        "application/zip",
+    ))
 }
 
 fn resolve_page_ids(

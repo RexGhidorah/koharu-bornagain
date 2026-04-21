@@ -42,11 +42,14 @@ export async function importKhrFile(): Promise<void> {
 // Export (server returns bytes; saveBlob dispatches Tauri-dialog / web-FS)
 // ---------------------------------------------------------------------------
 
-const exportExtension: Record<'khr' | 'psd' | 'rendered' | 'inpainted', string> = {
+import type { CbzExportMetadata } from '@/lib/api/schemas'
+
+const exportExtension: Record<'khr' | 'psd' | 'rendered' | 'inpainted' | 'cbz', string> = {
   khr: 'khr',
   psd: 'zip',
   rendered: 'zip',
   inpainted: 'zip',
+  cbz: 'cbz',
 }
 
 /** Sanitise an arbitrary project name for use as a filename stem. */
@@ -65,11 +68,12 @@ function currentProjectName(): string | undefined {
 }
 
 export async function exportCurrentProjectAs(
-  format: 'khr' | 'psd' | 'rendered' | 'inpainted',
+  format: 'khr' | 'psd' | 'rendered' | 'inpainted' | 'cbz',
   pages?: string[],
+  cbzMetadata?: CbzExportMetadata,
 ): Promise<void> {
   try {
-    const { blob, filename } = await exportProject({ format, pages })
+    const { blob, filename } = await exportProject({ format, pages, cbzMetadata })
     const base = sanitiseBaseName(currentProjectName())
     // Prefer the server's Content-Disposition filename (matches the actual
     // bytes — a raw PNG/PSD for single-file responses, a zip for multi).
