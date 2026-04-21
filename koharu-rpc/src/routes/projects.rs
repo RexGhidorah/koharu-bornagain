@@ -395,7 +395,7 @@ async fn export_cbz(
 
             let is_cover = metadata_c
                 .as_ref()
-                .map_or(false, |m| m.cover_page == Some(*id));
+                .is_some_and(|m| m.cover_page == Some(*id));
             let filename = if is_cover {
                 "00_cover.png".to_string()
             } else {
