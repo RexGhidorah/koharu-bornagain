@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { fitCanvasToViewport, resetCanvasScale } from '@/components/Canvas'
+import { CbzExportDialog } from '@/components/CbzExportDialog'
 import { SettingsDialog, type TabId } from '@/components/SettingsDialog'
 import {
   Menubar,
@@ -62,6 +63,7 @@ export function MenuBar() {
   const { t } = useTranslation()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [settingsTab, setSettingsTab] = useState<TabId>('appearance')
+  const [cbzExportOpen, setCbzExportOpen] = useState(false)
   const hasPage = useSelectionStore((s) => s.pageId !== null)
   const hasScene = useScene().scene !== null
   const shortcuts = usePreferencesStore((state) => state.shortcuts)
@@ -128,6 +130,12 @@ export function MenuBar() {
       onSelect: () => void exportCurrentProjectAs('rendered'),
       disabled: !hasScene,
       testId: 'menu-file-export-all-rendered',
+    },
+    {
+      label: t('menu.exportCbz', 'Export to CBZ...'),
+      onSelect: () => setCbzExportOpen(true),
+      disabled: !hasScene,
+      testId: 'menu-file-export-cbz',
     },
   ]
 
@@ -341,6 +349,7 @@ export function MenuBar() {
       <div data-tauri-drag-region className='flex h-full flex-1 items-center justify-center' />
       {isWindowsTauri && <WindowControls />}
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} defaultTab={settingsTab} />
+      <CbzExportDialog open={cbzExportOpen} onOpenChange={setCbzExportOpen} />
     </div>
   )
 }
